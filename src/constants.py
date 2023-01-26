@@ -5,6 +5,7 @@ from enum import Enum
 import discord
 import pytz
 
+from datetime import datetime, timedelta
 import config
 
 
@@ -164,11 +165,13 @@ tips = (
     "You can add a role to multiple users with `role @role @user @user2...` command.",
     "Quotient can detect and verify youtube/insta/loco,etc. screenshots (`ssverify` cmd).",
     "You can buy Quotient Pro for 29INR only at <https://quotientbot.xyz/premium>",
-    "You can customized embeds with `/embed` command."
+    "You can send customized embeds with `/embed` command."
     "Scrims Slot Cancel-Claim is available for free with `slotm` command.",
     "You can create tourney groups with `tourney` command.",
-    "Scrims Open & Close messages can be designed with `design` button on `sm` command.",
-    "With Quotient Pro you can set custom success message that will be sent to the user after registration.",
+    "Scrims Open & Close messages can be designed with `sm` command.",
+    "With Quotient Pro you can set custom DM message.",
+    "We also make custom bots, checkout: ",
+    
 )
 
 
@@ -176,9 +179,40 @@ async def show_tip(ctx):
     if ctx.author.id in config.DEVS:
         return
 
-    if random.randint(40, 69) == 69:
+    if random.randint(45, 69) == 69:
         with suppress(discord.HTTPException, discord.Forbidden):
             await ctx.send(f"**Did You Know?:** {random.choice(tips)}")
+
+
+async def remind_premium(ctx):
+    if random.randint(1, 3) != 1:
+        return
+
+    from utils import discord_timestamp
+    from models import Guild
+    from cogs.premium.views import PremiumPurchaseBtn
+
+    guild = await Guild.get_or_none(
+        pk=ctx.guild.id, is_premium=True, premium_end_time__lte=ctx.bot.current_time + timedelta(days=5)
+    )
+    if not guild:
+        return
+
+    if guild.premium_end_time < ctx.bot.current_time:
+        return
+
+    _e = discord.Embed(color=discord.Color.red(), title="Premium Ending Soon....")
+    _e.description = (
+        f"Your Quotient Premium subscription is ending {discord_timestamp(guild.premium_end_time)}\n\n"
+        "*Click the button to renew your subscription.*"
+    )
+    v = discord.ui.View(timeout=None)
+    v.add_item(PremiumPurchaseBtn(label="Renew Premium"))
+
+    try:
+        await ctx.reply(embed=_e, view=v)
+    except discord.HTTPException:
+        return
 
 
 class HelpGIF(Enum):
